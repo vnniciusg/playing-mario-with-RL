@@ -11,6 +11,8 @@ dependencies = [
     "gym-super-mario-bros>=7.4.0",
     "matplotlib>=3.10.1",
     "numpy<2.0.0",
+    "tensordict>=0.7.2",
+    "torchrl>=0.7.2",
 ]
 
 
