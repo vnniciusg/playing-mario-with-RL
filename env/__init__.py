@@ -4,32 +4,35 @@ from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
 from gym.wrappers.frame_stack import FrameStack
 from gym.wrappers.gray_scale_observation import GrayScaleObservation
 from gym.wrappers.resize_observation import ResizeObservation
+from gym import Wrapper
 
 
-def create_mario_env(env_id: str = "SuperMarioBros-1-1-v0", render_mode: str = "rgb_array") -> FrameStack:
+class SkipFrame(Wrapper):
+    def __init__(self, env, skip):
+        super().__init__(env)
+        self.skip = skip
+
+    def step(self, action):
+        total_reward, done = 0.0, False
+        for _ in range(self.skip):
+            next_state, reward, done, trunc, info = self.env.step(action)
+            total_reward += reward
+            if done:
+                break
+
+        return next_state, total_reward, done, trunc, info
+
+
+def create_mario_env(env_id: str = "SuperMarioBros-1-1-v0", render_mode: str = "human") -> FrameStack:
     """Create a Mario environment with specific configurations."""
 
     env = gym_super_mario_bros.make(env_id, apply_api_compatibility=True, render_mode=render_mode)
 
     env = JoypadSpace(env, SIMPLE_MOVEMENT)
 
-    env = GrayScaleObservation(env, keep_dim=True)
+    env = SkipFrame(env, skip=4)
     env = ResizeObservation(env, (84, 84))
-    env = FrameStack(env, 4)
+    env = GrayScaleObservation(env)
+    env = FrameStack(env, 4, lz4_compress=True)
 
     return env
-
-
-if __name__ == "__main__":
-    __import__("warnings").filterwarnings("ignore")
-
-    env = create_mario_env(render_mode="human")
-
-    done = True
-    for step in range(100_000):
-        if done:
-            env.reset()
-        state, reward, terminated, truncated, info = env.step(env.action_space.sample())
-        done = terminated or truncated
-        env.render()
-    env.close()
